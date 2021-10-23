@@ -1,0 +1,166 @@
+    var term = 'sample';
+
+    function getRandomSubarray(arr, size) {
+        var shuffled = arr.slice(0), i = arr.length, temp, index;
+        while (i--) {
+            index = Math.floor((i + 1) * Math.random());
+            temp = shuffled[index];
+            shuffled[index] = shuffled[i];
+            shuffled[i] = temp;
+        }
+        return shuffled.slice(0, size);
+    }
+    var words = [];
+    client.score = new Map();
+    
+    
+    
+    {//word game mechanics
+
+        //pregame
+        if (command === 'play' && args[0] === "wordgame" && game === 0) {
+            game = 1.1;
+
+            const pregame = {
+                color: 0x0099ff,
+                title: 'Word Game',
+                description: 'Battle your friends using your Urban Dictionary Vocabulary! ...or guessing powers.\nUsing the letters that will be shown, you must input words.\n1 letter = 1 point; First to 25 points win!',
+                fields: [
+                    {
+                        name: 'Join',
+                        value: 'Type `>word join` to join!',
+                    },
+                    {
+                        name: 'Start',
+                        value: 'Type `>word start` to start!',
+                        inline: true,
+                    }],
+            };
+            message.channel.send({ embeds: [pregame] })
+
+        }
+
+        //join game
+        if (command === 'word' && args[0] === 'join' && game === 1.1) {
+            client.score.set(message.author.id, 0);
+            console.log(client.score.get(message.author.id));
+            message.react('👍');
+        }
+
+        //start game
+        if (command === 'word' && args[0] === 'start' && game === 1.1 && client.score.has(message.author.id)) {
+            message.channel.send("The game will now begin!");
+
+            var alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+
+            var letters = getRandomSubarray(alphabet, 8);
+
+            const embedLetters = {
+                color: 0x0099ff,
+                title: 'The Letters',
+                description: letters.join(','),
+            };
+
+            message.channel.send({ embeds: [embedLetters] })
+            
+
+            difference = alphabet.filter(function (x) {
+                return letters.indexOf(x) < 0;
+            });
+
+            console.log(difference);
+
+            game = 2.1;
+
+        }
+        else if (command === 'word' && args[0] === 'start' && game === 1.1 && !client.score.has(message.author.id)) {
+            message.channel.send("You are not part of the game");
+        }
+
+
+        //stop game
+        if (command === 'word' && args[0] === 'stop') {
+            const stopped = {
+                color: 0x0099ff,
+                title: 'Game Over',
+                description: 'Game is stopped',
+            };
+
+            message.channel.send({ embeds: [stopped] })
+
+            words = words;
+
+            client.score.clear();
+            words = [];
+            game = 0;
+
+        }
+
+        //game proper
+        if (command === 'word' && game === 2.1 && client.score.has(message.author.id) && !message.author.bot) {
+            term = args[0];
+
+            difference = difference;
+
+            var wordIncludesWrong = difference.some(wrong => term.includes(wrong));
+            var wordIncludesTaken = words.some(taken => term.includes(taken));
+            
+            if (wordIncludesWrong === true || wordIncludesTaken === true) {
+                console.log('not okay');
+                message.react('❌');
+                console.log(client.score.get(message.author.id));
+            }
+            else if (wordIncludesWrong === false) {
+                console.log('okay');
+
+                ud.define(term, (error, results) => {
+                    if (error) {
+                        console.error(`define (callback) error - ${error.message}`)
+                        message.react('❌');
+                        console.log(client.score.get(message.author.id));
+                        return
+                    }
+                    if (!error) {
+                        console.log('define (callback)')
+                        message.react('✔️');
+
+                        client.score.set(message.author.id, client.score.get(message.author.id) + term.length);
+
+                        console.log(client.score.get(message.author.id));
+
+                        words.push(term);
+
+                        Object.entries(results[0]).forEach(([key, prop]) => {
+                            console.log(`${key}: ${prop}`)
+                        })
+
+                    }
+                })
+            }
+
+
+
+        }
+        else if (command === 'word' && game === 2.1 && !client.score.has(message.author.id)) {
+            message.channel.send('You are not part of the game.');
+        }
+
+
+        //winner
+        if (client.score.get(message.author.id) >= 25) {
+            const win = {
+                color: 0x0099ff,
+                title: 'Winner',
+                description: message.author.tag + ' won!',
+            };
+
+            message.channel.send({ embeds: [win] })
+
+            words = words;
+
+            client.score.clear();
+            words = [];
+            game = 0;
+        }
+    }
+    
